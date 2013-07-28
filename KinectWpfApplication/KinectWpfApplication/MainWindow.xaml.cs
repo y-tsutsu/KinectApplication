@@ -75,6 +75,9 @@ namespace KinectWpfApplication
             if (e.OldSensor != null)
             {
                 this.StopKinect(e.OldSensor);
+                this.imageRgb.Source = null;
+                this.imageDepth.Source = null;
+                this.canvasSkeleton.Children.Clear();
             }
         }
 
@@ -162,8 +165,6 @@ namespace KinectWpfApplication
             kinect.ColorStream.Disable();
             kinect.DepthStream.Disable();
             kinect.SkeletonStream.Disable();
-            this.imageRgb.Source = null;
-            this.imageDepth.Source = null;
         }
 
         /// <summary>
