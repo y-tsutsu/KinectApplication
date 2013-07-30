@@ -22,7 +22,15 @@ namespace KinectClassLibrary
         /// <summary>
         /// ピクセルあたりのByte数（BGR32）
         /// </summary>
-        private static readonly int Bgr32BytesPerPixel = PixelFormats.Bgr32.BitsPerPixel / 8;
+        private static readonly int bgr32BytesPerPixel = PixelFormats.Bgr32.BitsPerPixel / 8;
+
+        /// <summary>
+        /// ピクセルあたりのByte数（BGR32）
+        /// </summary>
+        public static int Bgr32BytesPerPixel
+        {
+            get { return bgr32BytesPerPixel; }
+        }
 
         /// <summary>
         /// KinectSensorの動作を停止する（Dispose付き）
@@ -65,7 +73,7 @@ namespace KinectClassLibrary
         /// </summary>
         /// <param name="depthFrame"></param>
         /// <returns></returns>
-        public static DepthImagePixel[] ToDepthImagePixelData(this DepthImageFrame depthFrame)
+        public static DepthImagePixel[] ToDepthImagePixels(this DepthImageFrame depthFrame)
         {
             var pixels = new DepthImagePixel[depthFrame.PixelDataLength];
             depthFrame.CopyDepthImagePixelDataTo(pixels);
@@ -78,9 +86,9 @@ namespace KinectClassLibrary
         /// <param name="depthFrame"></param>
         /// <param name="kinect"></param>
         /// <returns></returns>
-        public static ColorImagePoint[] ToColorImagePointData(this DepthImageFrame depthFrame, KinectSensor kinect)
+        public static ColorImagePoint[] ToColorImagePoints(this DepthImageFrame depthFrame, KinectSensor kinect)
         {
-            return depthFrame.ToColorImagePointData(kinect, depthFrame.ToDepthImagePixelData());
+            return depthFrame.ToColorImagePoints(kinect, depthFrame.ToDepthImagePixels());
         }
 
         /// <summary>
@@ -90,7 +98,7 @@ namespace KinectClassLibrary
         /// <param name="kinect"></param>
         /// <param name="depthPixels"></param>
         /// <returns></returns>
-        public static ColorImagePoint[] ToColorImagePointData(this DepthImageFrame depthFrame, KinectSensor kinect, DepthImagePixel[] depthPixels)
+        public static ColorImagePoint[] ToColorImagePoints(this DepthImageFrame depthFrame, KinectSensor kinect, DepthImagePixel[] depthPixels)
         {
             var colorPoints = new ColorImagePoint[depthPixels.Length];
             kinect.CoordinateMapper.MapDepthFrameToColorFrame(kinect.DepthStream.Format, depthPixels, kinect.ColorStream.Format, colorPoints);
@@ -117,15 +125,15 @@ namespace KinectClassLibrary
         /// <returns></returns>
         private static byte[] ConvertDepthFrameToBitmap(this DepthImageFrame depthFrame, KinectSensor kinect)
         {
-            var depthPixels = depthFrame.ToDepthImagePixelData();
-            var colorPoints = depthFrame.ToColorImagePointData(kinect, depthPixels);
-            var bitmap = new byte[colorPoints.Length * KinectExtensions.Bgr32BytesPerPixel];
+            var depthPixels = depthFrame.ToDepthImagePixels();
+            var colorPoints = depthFrame.ToColorImagePoints(kinect, depthPixels);
+            var bitmap = new byte[colorPoints.Length * KinectExtensions.bgr32BytesPerPixel];
 
             for (int i = 0; i < depthPixels.Length; i++)
             {
                 int x = Math.Min(colorPoints[i].X, kinect.ColorStream.FrameWidth - 1);
                 int y = Math.Min(colorPoints[i].Y, kinect.ColorStream.FrameHeight - 1);
-                int colorIndex = ((y * depthFrame.Width) + x) * KinectExtensions.Bgr32BytesPerPixel;
+                int colorIndex = ((y * depthFrame.Width) + x) * KinectExtensions.bgr32BytesPerPixel;
 
                 if (depthPixels[i].IsKnownDepth)
                 {
@@ -209,7 +217,7 @@ namespace KinectClassLibrary
         public static int ToByteArrayIndex(this ColorImagePoint colorPoint, ColorImageFrame colorFrame, DepthImageFrame depthFrame, System.Windows.Media.PixelFormat pixelFormat)
         {
             int x = Math.Min(colorPoint.X, colorFrame.Width - 1);
-            int y = Math.Min(colorPoint.Y, colorFrame.Width - 1);
+            int y = Math.Min(colorPoint.Y, colorFrame.Height - 1);
 
             return ((y * depthFrame.Width) + x) * pixelFormat.BitsPerPixel / 8;
         }

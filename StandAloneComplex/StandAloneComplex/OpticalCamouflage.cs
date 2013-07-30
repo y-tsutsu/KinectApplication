@@ -65,8 +65,8 @@ namespace StandAloneComplex
             if (kinect == null || colorFrame == null || depthFrame == null || !this.IsInitialized) { return; }
 
             var colorPixels = colorFrame.ToPixelData();
-            var depthPixels = depthFrame.ToDepthImagePixelData();
-            var colorPoints = depthFrame.ToColorImagePointData(kinect, depthPixels);
+            var depthPixels = depthFrame.ToDepthImagePixels();
+            var colorPoints = depthFrame.ToColorImagePoints(kinect, depthPixels);
 
             for (int i = 0; i < depthPixels.Length; i++)
             {
@@ -92,8 +92,8 @@ namespace StandAloneComplex
             if (kinect == null || colorFrame == null || depthFrame == null || !this.IsActive) { return null; }
 
             var colorPixels = colorFrame.ToPixelData();
-            var depthPixels = depthFrame.ToDepthImagePixelData();
-            var colorPoints = depthFrame.ToColorImagePointData(kinect, depthPixels);
+            var depthPixels = depthFrame.ToDepthImagePixels();
+            var colorPoints = depthFrame.ToColorImagePoints(kinect, depthPixels);
 
             for (int i = 0; i < depthPixels.Length; i++)
             {
