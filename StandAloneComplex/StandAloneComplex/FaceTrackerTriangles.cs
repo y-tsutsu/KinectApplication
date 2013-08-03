@@ -105,7 +105,7 @@ namespace StandAloneComplex
         {
             if (colorFrame == null || depthFrame == null || skeleton == null) { return null; }
 
-            return this.faceTracker.Track(colorFrame.Format, colorFrame.ToPixelData(), depthFrame.Format, depthFrame.ToPixelData(), skeleton);
+            return this.faceTracker.Track(colorFrame.Format, colorFrame.ToPixels(), depthFrame.Format, depthFrame.ToPixels(), skeleton);
         }
 
         /// <summary>

@@ -97,7 +97,7 @@ namespace KinectWpfApplication
                 kinect.DepthStream.Range = DepthRange.Near;
                 kinect.SkeletonStream.TrackingMode = SkeletonTrackingMode.Default;
                 kinect.SkeletonStream.EnableTrackingInNearRange = true;
-                kinect.AllFramesReady += kinect_AllFramesReady;
+                kinect.AllFramesReady += this.kinect_AllFramesReady;
 
                 this.InitializeTiltAngleComboBox(this.comboTiltAngle, kinect);
                 this.InitializeRangeComboBox(this.comboRange, kinect);

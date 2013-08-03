@@ -49,7 +49,7 @@ namespace KinectClassLibrary
         /// </summary>
         /// <param name="colorFrame"></param>
         /// <returns></returns>
-        public static byte[] ToPixelData(this ColorImageFrame colorFrame)
+        public static byte[] ToPixels(this ColorImageFrame colorFrame)
         {
             var pixels = new byte[colorFrame.PixelDataLength];
             colorFrame.CopyPixelDataTo(pixels);
@@ -61,7 +61,7 @@ namespace KinectClassLibrary
         /// </summary>
         /// <param name="depthFrame"></param>
         /// <returns></returns>
-        public static short[] ToPixelData(this DepthImageFrame depthFrame)
+        public static short[] ToPixels(this DepthImageFrame depthFrame)
         {
             var pixels = new short[depthFrame.PixelDataLength];
             depthFrame.CopyPixelDataTo(pixels);
@@ -344,8 +344,7 @@ namespace KinectClassLibrary
         /// <param name="kinect"></param>
         public static void DrawSkeletonEllipses(this Skeleton skeleton, Canvas canvas, KinectSensor kinect)
         {
-            const double radius = 5.0;
-            var brush = Brushes.MidnightBlue;
+            double radius = Math.Min(canvas.ActualWidth, canvas.ActualHeight) / 60.0;
 
             if (skeleton.TrackingState == SkeletonTrackingState.Tracked)
             {
@@ -353,11 +352,13 @@ namespace KinectClassLibrary
                 {
                     if (item.TrackingState == JointTrackingState.NotTracked) { continue; }
 
+                    var brush = (item.TrackingState == JointTrackingState.Tracked) ? Brushes.CornflowerBlue : Brushes.Gold;
                     canvas.DrawEllipseBySkeletonPoint(radius, brush, item.Position, kinect);
                 }
             }
             else if (skeleton.TrackingState == SkeletonTrackingState.PositionOnly)
             {
+                var brush = Brushes.CornflowerBlue;
                 canvas.DrawEllipseBySkeletonPoint(radius, brush, skeleton.Position, kinect);
             }
         }
@@ -386,6 +387,32 @@ namespace KinectClassLibrary
         /// <param name="position"></param>
         /// <param name="kinect"></param>
         public static void DrawEllipse(this Canvas canvas, double radius, Brush brush, System.Windows.Point position, KinectSensor kinect)
+        {
+            var point = new System.Windows.Point
+            {
+                X = (int)KinectExtensions.ScaleTo(position.X, kinect.ColorStream.FrameWidth, canvas.Width),
+                Y = (int)KinectExtensions.ScaleTo(position.Y, kinect.ColorStream.FrameHeight, canvas.Height)
+            };
+
+            canvas.Children.Add(new Ellipse
+            {
+                Stroke = brush,
+                StrokeThickness = 3.5,
+                Margin = new Thickness(point.X - radius, point.Y - radius, 0, 0),
+                Width = radius * 2,
+                Height = radius * 2
+            });
+        }
+
+        /// <summary>
+        /// 丸を描画する（塗りつぶし）
+        /// </summary>
+        /// <param name="canvas"></param>
+        /// <param name="radius"></param>
+        /// <param name="brush"></param>
+        /// <param name="position"></param>
+        /// <param name="kinect"></param>
+        public static void DrawEllipseFill(this Canvas canvas, double radius, Brush brush, System.Windows.Point position, KinectSensor kinect)
         {
             var point = new System.Windows.Point
             {

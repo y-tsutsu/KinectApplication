@@ -153,7 +153,7 @@ namespace StandAloneComplex
                 kinect.DepthStream.Range = DepthRange.Near;
                 kinect.SkeletonStream.TrackingMode = SkeletonTrackingMode.Default;
                 kinect.SkeletonStream.EnableTrackingInNearRange = true;
-                kinect.AllFramesReady += kinect_AllFramesReady;
+                kinect.AllFramesReady += this.kinect_AllFramesReady;
 
                 this.InitializeTiltAngleComboBox(this.comboTiltAngle, kinect);
                 this.InitializeRangeComboBox(this.comboRange, kinect);
@@ -605,16 +605,18 @@ namespace StandAloneComplex
 
             canvas.Children.Clear();
 
+            double radius = Math.Min(canvas.ActualWidth, canvas.ActualHeight) / 50.0;
+
             foreach (var item in this.handTracker.LeftPoints)
             {
                 var brush = new SolidColorBrush { Color = Colors.LightGreen, Opacity = item.Opacity };
-                canvas.DrawEllipse(10.0, brush, item.Position, kinect);
+                canvas.DrawEllipseFill(radius, brush, item.Position, kinect);
             }
 
             foreach (var item in this.handTracker.RightPoints)
             {
                 var brush = new SolidColorBrush { Color = Colors.LightPink, Opacity = item.Opacity };
-                canvas.DrawEllipse(10.0, brush, item.Position, kinect);
+                canvas.DrawEllipseFill(radius, brush, item.Position, kinect);
             }
         }
 
