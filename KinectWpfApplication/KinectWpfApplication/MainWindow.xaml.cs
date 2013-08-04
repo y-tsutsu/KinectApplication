@@ -102,6 +102,8 @@ namespace KinectWpfApplication
                 this.InitializeTiltAngleComboBox(this.comboTiltAngle, kinect);
                 this.InitializeRangeComboBox(this.comboRange, kinect);
                 this.InitializeTrackingModeComboBox(this.comboTrackingMode, kinect);
+
+                this.imageOpening.Source = null;
             }
             catch (Exception ex)
             {

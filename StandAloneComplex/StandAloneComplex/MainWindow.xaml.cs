@@ -162,6 +162,8 @@ namespace StandAloneComplex
                 this.faceTracker.Initialize(kinect);
                 this.handTracker.Initialize(kinect);
                 this.speechRecognizer.Start(kinect);
+
+                this.imageOpening.Source = null;
             }
             catch (Exception ex)
             {

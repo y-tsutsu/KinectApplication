@@ -4,6 +4,7 @@
         Title="STAND ALONE COMPLEX" Height="350" Width="525" VerticalContentAlignment="Center" Loaded="Window_Loaded" Closed="Window_Closed"
         WindowStartupLocation="CenterScreen" Icon="sp00k (blue).ico" MinHeight="300" MinWidth="365">
     <Grid>
+        <Image Name="imageOpening" Stretch="None" Source="png/SplashScreen.png"/>
         <Image Name="imageRgb" Stretch="Uniform"/>
         <Image Name="imageDepth" Stretch="Uniform" Opacity="0.5"/>
         <Canvas Name="canvasSkeleton" Width="{Binding ElementName=imageRgb, Path=ActualWidth}" Height="{Binding ElementName=imageRgb, Path=ActualHeight}"/>
