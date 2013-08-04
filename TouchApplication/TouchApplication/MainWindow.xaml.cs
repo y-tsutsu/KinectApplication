@@ -17,7 +17,7 @@ using Microsoft.Kinect.Toolkit;
 using Coding4Fun.Kinect.Wpf;
 using KinectClassLibrary;
 
-namespace KinectWpfApplication
+namespace TouchApplication
 {
     /// <summary>
     /// MainWindow.xaml の相互作用ロジック
@@ -25,9 +25,59 @@ namespace KinectWpfApplication
     public partial class MainWindow : Window
     {
         /// <summary>
+        /// 選択モード
+        /// </summary>
+        private enum SelectMode
+        {
+            NotSelected,
+            Selecting,
+            Selected
+        }
+
+        /// <summary>
+        /// タッチポイントのエラー値
+        /// </summary>
+        private readonly int ERROR_OF_POINT = -100;
+
+        /// <summary>
         /// KinectSensorChooser
         /// </summary>
         private KinectSensorChooser sensorChooser = new KinectSensorChooser();
+
+        /// <summary>
+        /// 現在の領域選択モード
+        /// </summary>
+        private SelectMode currentMode = SelectMode.NotSelected;
+        
+        /// <summary>
+        /// 指定領域の始点
+        /// </summary>
+        private Point startPointOfRect;
+
+        /// <summary>
+        /// 前フレームのタッチ座標
+        /// </summary>
+        private Point preTouchPoint;
+
+        /// <summary>
+        /// 指定した領域
+        /// </summary>
+        private Rect selectRegion;
+
+        /// <summary>
+        /// 領域内の深度データ
+        /// </summary>
+        private DepthImagePoint[] backgroundDepthPoints;
+
+        /// <summary>
+        /// 深度データ
+        /// </summary>
+        private DepthImagePoint[] depthPoints;
+
+        /// <summary>
+        /// カラーデータ
+        /// </summary>
+        private ColorImagePoint[] colorPoints;
 
         /// <summary>
         /// コンストラクタ
@@ -184,7 +234,13 @@ namespace KinectWpfApplication
 
                 var kinect = sender as KinectSensor;
 
-                this.DrawRgbImage(this.imageRgb, colorFrame);
+                if (this.depthPoints == null)
+                {
+                    this.depthPoints = new DepthImagePoint[depthFrame.PixelDataLength];
+                    this.colorPoints = new ColorImagePoint[depthFrame.PixelDataLength];
+                }
+
+                this.DrawTouchImage(this.imageRgb, colorFrame, depthFrame, kinect);
                 this.DrawDepthImage(this.imageDepth, depthFrame, kinect);
                 this.DrawSkeleton(this.canvasSkeleton, skeletonFrame, kinect);
             }
@@ -250,6 +306,103 @@ namespace KinectWpfApplication
         }
 
         /// <summary>
+        /// RGB画像を描画する
+        /// </summary>
+        /// <param name="image"></param>
+        /// <param name="colorFrame"></param>
+        /// <param name="depthFrame"></param>
+        /// <param name="kinect"></param>
+        private void DrawTouchImage(Image image, ColorImageFrame colorFrame, DepthImageFrame depthFrame, KinectSensor kinect)
+        {
+            if (!this.checkRgb.IsChecked.HasValue || !this.checkRgb.IsChecked.Value)
+            {
+                this.imageRgb.Source = null;
+                return;
+            }
+
+            if (colorFrame.FrameNumber % 3 != 0) { return; }
+
+            this.imageRgb.Source = colorFrame.ToBitmapSource(depthFrame, kinect);
+
+            switch (this.currentMode)
+            {
+                case SelectMode.Selecting:
+                    this.UpdateRectPosition(image);
+                    break;
+                case SelectMode.Selected:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// 選択領域をあらわすRectangleの描画を更新
+        /// </summary>
+        private void UpdateRectPosition(Image image)
+        {
+            var currentPoint = Mouse.GetPosition(image);
+
+            Rect rect;
+
+            if (currentPoint.X < this.startPointOfRect.X && currentPoint.Y < this.startPointOfRect.Y)
+            {
+                rect = new Rect(currentPoint.X, currentPoint.Y, Math.Abs(this.startPointOfRect.X - currentPoint.X), Math.Abs(this.startPointOfRect.Y - currentPoint.Y));
+            }
+            else if (currentPoint.X < this.startPointOfRect.X)
+            {
+                rect = new Rect(currentPoint.X, this.startPointOfRect.Y, Math.Abs(this.startPointOfRect.X - currentPoint.X), Math.Abs(this.startPointOfRect.Y - currentPoint.Y));
+            }
+            else if (currentPoint.Y < this.startPointOfRect.Y)
+            {
+                rect = new Rect(this.startPointOfRect.X, currentPoint.Y, Math.Abs(this.startPointOfRect.X - currentPoint.X), Math.Abs(this.startPointOfRect.Y - currentPoint.Y));
+            }
+            else
+            {
+                rect = new Rect(this.startPointOfRect.X, this.startPointOfRect.Y, Math.Abs(this.startPointOfRect.X - currentPoint.X), Math.Abs(this.startPointOfRect.Y - currentPoint.Y));
+            }
+
+            Canvas.SetLeft(this.selectRectangle, rect.X);
+            Canvas.SetTop(this.selectRectangle, rect.Y);
+            this.selectRectangle.Width = rect.Width;
+            this.selectRectangle.Height = rect.Height;
+
+            this.selectRegion = rect;
+        }
+
+        /// <summary>
+        /// タッチしている所を表すEllipseの描画を更新
+        /// </summary>
+        /// <param name="p"></param>
+        private void UpdateTouchingPointEllipse(Ellipse ellipse, Point point)
+        {
+            ellipse.Width = 20;
+            ellipse.Height = 20;
+            Canvas.SetLeft(ellipse, point.X - ellipse.Width / 2);
+            Canvas.SetTop(ellipse, point.Y - ellipse.Height / 2);
+        }
+
+        /// <summary>
+        /// ペイント用ウィンドウを更新
+        /// </summary>
+        /// <param name="point"></param>
+        private void UpdatePointCanvas(Point point)
+        {
+            if (point.X == this.preTouchPoint.X && point.Y == this.preTouchPoint.Y)
+            {
+                return;
+            }
+            else if ((point.X == this.ERROR_OF_POINT && point.Y == this.ERROR_OF_POINT) ||
+                (this.preTouchPoint.X == this.ERROR_OF_POINT && this.preTouchPoint.Y == this.ERROR_OF_POINT))
+            {
+                this.preTouchPoint = point;
+                return;
+            }
+
+            this.preTouchPoint = point;
+        }
+
+        /// <summary>
         /// チルトモータの角度用ComboBoxの選択イベント
         /// </summary>
         /// <param name="sender"></param>
@@ -304,6 +457,36 @@ namespace KinectWpfApplication
             {
                 MessageBox.Show(ex.Message, this.Title, MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        /// <summary>
+        /// マウスの左ボタンのダウンイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Window_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        /// <summary>
+        /// マウスの左ボタンのアップイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Window_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
+        {
+
+        }
+
+        /// <summary>
+        /// スタートボタンのクリックイベント
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void buttonStart_Click(object sender, RoutedEventArgs e)
+        {
+
         }
     }
 }

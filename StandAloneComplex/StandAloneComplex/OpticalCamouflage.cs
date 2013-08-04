@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
@@ -66,13 +67,13 @@ namespace StandAloneComplex
 
             var colorPixels = colorFrame.ToPixels();
             var depthPixels = depthFrame.ToDepthImagePixels();
-            var colorPoints = depthFrame.ToColorImagePoints(kinect, depthPixels);
+            var colorPoints = depthFrame.ToColorImagePoints(depthPixels, kinect);
 
             for (int i = 0; i < depthPixels.Length; i++)
             {
                 if (depthPixels[i].PlayerIndex != 0) { continue; }
 
-                var colorIndex = colorPoints[i].ToByteArrayIndex(colorFrame, depthFrame, PixelFormats.Bgr32);
+                var colorIndex = colorPoints[i].ToByteArrayIndex(colorFrame.Width, colorFrame.Height, depthFrame.Width, PixelFormats.Bgra32.BitsPerPixel / 8);
 
                 this.backupPixels[colorIndex] = colorPixels[colorIndex];
                 this.backupPixels[colorIndex + 1] = colorPixels[colorIndex + 1];
@@ -93,13 +94,13 @@ namespace StandAloneComplex
 
             var colorPixels = colorFrame.ToPixels();
             var depthPixels = depthFrame.ToDepthImagePixels();
-            var colorPoints = depthFrame.ToColorImagePoints(kinect, depthPixels);
+            var colorPoints = depthFrame.ToColorImagePoints(depthPixels, kinect);
 
             for (int i = 0; i < depthPixels.Length; i++)
             {
                 if (depthPixels[i].PlayerIndex == 0) { continue; }
 
-                var colorIndex = colorPoints[i].ToByteArrayIndex(colorFrame, depthFrame, PixelFormats.Bgr32);
+                var colorIndex = colorPoints[i].ToByteArrayIndex(colorFrame.Width, colorFrame.Height, depthFrame.Width, PixelFormats.Bgra32.BitsPerPixel / 8);
 
                 colorPixels[colorIndex] = this.backupPixels[colorIndex];
                 colorPixels[colorIndex + 1] = this.backupPixels[colorIndex + 1];

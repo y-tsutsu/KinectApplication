@@ -212,7 +212,7 @@ namespace StandAloneComplex
 
             this.stream.ProcessDepth(depthFrame.GetRawPixelData(), depthFrame.Timestamp);
 
-            var skeletons = skeletonFrame.ToSkeletonData();
+            var skeletons = skeletonFrame.ToSkeletons();
             this.stream.ProcessSkeleton(skeletons, kinect.AccelerometerGetCurrentReading(), skeletonFrame.Timestamp);
 
             foreach (var hand in this.handTrackingInfos)

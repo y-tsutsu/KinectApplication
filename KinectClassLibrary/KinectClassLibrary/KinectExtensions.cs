@@ -88,7 +88,7 @@ namespace KinectClassLibrary
         /// <returns></returns>
         public static ColorImagePoint[] ToColorImagePoints(this DepthImageFrame depthFrame, KinectSensor kinect)
         {
-            return depthFrame.ToColorImagePoints(kinect, depthFrame.ToDepthImagePixels());
+            return depthFrame.ToColorImagePoints(depthFrame.ToDepthImagePixels(), kinect);
         }
 
         /// <summary>
@@ -98,11 +98,60 @@ namespace KinectClassLibrary
         /// <param name="kinect"></param>
         /// <param name="depthPixels"></param>
         /// <returns></returns>
-        public static ColorImagePoint[] ToColorImagePoints(this DepthImageFrame depthFrame, KinectSensor kinect, DepthImagePixel[] depthPixels)
+        public static ColorImagePoint[] ToColorImagePoints(this DepthImageFrame depthFrame, DepthImagePixel[] depthPixels ,KinectSensor kinect)
         {
             var colorPoints = new ColorImagePoint[depthPixels.Length];
             kinect.CoordinateMapper.MapDepthFrameToColorFrame(kinect.DepthStream.Format, depthPixels, kinect.ColorStream.Format, colorPoints);
             return colorPoints;
+        }
+
+        /// <summary>
+        /// ColorImageFrame -> BitmapSource
+        /// </summary>
+        /// <param name="colorFrame"></param>
+        /// <param name="depthFrame"></param>
+        /// <param name="kinect"></param>
+        /// <returns></returns>
+        public static BitmapSource ToBitmapSource(this ColorImageFrame colorFrame, DepthImageFrame depthFrame, KinectSensor kinect)
+        {
+            var bitmap = colorFrame.ConvertColorFrameToBitmap(depthFrame, kinect);
+            return bitmap.ToBitmapSource(depthFrame.Width, depthFrame.Height);
+        }
+
+        /// <summary>
+        /// ColorImageFrame -> byte[]
+        /// </summary>
+        /// <param name="colorFrame"></param>
+        /// <param name="depthFrame"></param>
+        /// <param name="kinect"></param>
+        /// <returns></returns>
+        private static byte[] ConvertColorFrameToBitmap(this ColorImageFrame colorFrame, DepthImageFrame depthFrame, KinectSensor kinect)
+        {
+            var colorPixels = colorFrame.ToPixels();
+            var colorPoints = depthFrame.ToColorImagePoints(kinect);
+            var bitmap = new byte[colorPixels.Length];
+
+            for (int i = 0; i < bitmap.Length; i += KinectExtensions.bgr32BytesPerPixel)
+            {
+                bitmap[i] = colorPixels[i];
+                bitmap[i + 1] = colorPixels[i + 1];
+                bitmap[i + 2] = colorPixels[i + 2];
+            }
+
+            int width = kinect.ColorStream.FrameWidth;
+            int height = kinect.ColorStream.FrameHeight;
+
+            for (int i = 0; i < colorPoints.Length; i++)
+            {
+                int colorIndex = colorPoints[i].ToByteArrayIndex(width, height, depthFrame.Width, KinectExtensions.bgr32BytesPerPixel);
+                int bitmapIndex = i * KinectExtensions.bgr32BytesPerPixel;
+
+                bitmap[bitmapIndex] = colorPixels[colorIndex];
+                bitmap[bitmapIndex + 1] = colorPixels[colorIndex + 1];
+                bitmap[bitmapIndex + 2] = colorPixels[colorIndex + 2];
+            }
+
+            return bitmap;
         }
 
         /// <summary>
@@ -126,14 +175,14 @@ namespace KinectClassLibrary
         private static byte[] ConvertDepthFrameToBitmap(this DepthImageFrame depthFrame, KinectSensor kinect)
         {
             var depthPixels = depthFrame.ToDepthImagePixels();
-            var colorPoints = depthFrame.ToColorImagePoints(kinect, depthPixels);
+            var colorPoints = depthFrame.ToColorImagePoints(depthPixels, kinect);
             var bitmap = new byte[colorPoints.Length * KinectExtensions.bgr32BytesPerPixel];
+            int width = kinect.ColorStream.FrameWidth;
+            int height = kinect.ColorStream.FrameHeight;
 
             for (int i = 0; i < depthPixels.Length; i++)
             {
-                int x = Math.Min(colorPoints[i].X, kinect.ColorStream.FrameWidth - 1);
-                int y = Math.Min(colorPoints[i].Y, kinect.ColorStream.FrameHeight - 1);
-                int colorIndex = ((y * depthFrame.Width) + x) * KinectExtensions.bgr32BytesPerPixel;
+                int colorIndex = colorPoints[i].ToByteArrayIndex(width, height, depthFrame.Width, KinectExtensions.bgr32BytesPerPixel);
 
                 if (depthPixels[i].IsKnownDepth)
                 {
@@ -210,16 +259,16 @@ namespace KinectClassLibrary
         /// ColorImagePoint -> byte[]のIndex
         /// </summary>
         /// <param name="colorPoint"></param>
-        /// <param name="colorFrame"></param>
-        /// <param name="depthFrame"></param>
-        /// <param name="pixelFormat"></param>
+        /// <param name="colorFrameRect"></param>
+        /// <param name="depthFrameRect"></param>
+        /// <param name="BytesPerPixel"></param>
         /// <returns></returns>
-        public static int ToByteArrayIndex(this ColorImagePoint colorPoint, ColorImageFrame colorFrame, DepthImageFrame depthFrame, System.Windows.Media.PixelFormat pixelFormat)
+        public static int ToByteArrayIndex(this ColorImagePoint colorPoint, int colorFrameWidth, int colorFrameHeight, int depthFrameWidth, int BytesPerPixel)
         {
-            int x = Math.Min(colorPoint.X, colorFrame.Width - 1);
-            int y = Math.Min(colorPoint.Y, colorFrame.Height - 1);
+            int x = Math.Min(colorPoint.X, colorFrameWidth - 1);
+            int y = Math.Min(colorPoint.Y, colorFrameHeight - 1);
 
-            return ((y * depthFrame.Width) + x) * pixelFormat.BitsPerPixel / 8;
+            return ((y * depthFrameWidth) + x) * BytesPerPixel;
         }
 
         /// <summary>
@@ -227,7 +276,7 @@ namespace KinectClassLibrary
         /// </summary>
         /// <param name="frame"></param>
         /// <returns></returns>
-        public static Skeleton[] ToSkeletonData(this SkeletonFrame frame)
+        public static Skeleton[] ToSkeletons(this SkeletonFrame frame)
         {
             var skeletons = new Skeleton[frame.SkeletonArrayLength];
             frame.CopySkeletonDataTo(skeletons);
@@ -241,7 +290,7 @@ namespace KinectClassLibrary
         /// <returns></returns>
         public static IEnumerable<Skeleton> GetTrackedSkeletons(this SkeletonFrame skeletonFrame)
         {
-            return skeletonFrame.ToSkeletonData().Where(s => s.TrackingState == SkeletonTrackingState.Tracked);
+            return skeletonFrame.ToSkeletons().Where(s => s.TrackingState == SkeletonTrackingState.Tracked);
         }
 
         /// <summary>
@@ -294,7 +343,7 @@ namespace KinectClassLibrary
         /// <param name="position1"></param>
         /// <param name="position2"></param>
         /// <param name="kinect"></param>
-        public static void DrawLineBySkeletonPoint(this Canvas canvas, double thickness, Brush brush, SkeletonPoint position1, SkeletonPoint position2, KinectSensor kinect)
+        private static void DrawLineBySkeletonPoint(this Canvas canvas, double thickness, Brush brush, SkeletonPoint position1, SkeletonPoint position2, KinectSensor kinect)
         {
             var colorPoint1 = position1.ToColorImagePoint(kinect);
             var colorPoint2 = position2.ToColorImagePoint(kinect);
@@ -371,7 +420,7 @@ namespace KinectClassLibrary
         /// <param name="brush"></param>
         /// <param name="position"></param>
         /// <param name="kinect"></param>
-        public static void DrawEllipseBySkeletonPoint(this Canvas canvas, double radius, Brush brush, SkeletonPoint position, KinectSensor kinect)
+        private static void DrawEllipseBySkeletonPoint(this Canvas canvas, double radius, Brush brush, SkeletonPoint position, KinectSensor kinect)
         {
             var colorPoint = position.ToColorImagePoint(kinect);
             var point = new System.Windows.Point(colorPoint.X, colorPoint.Y);

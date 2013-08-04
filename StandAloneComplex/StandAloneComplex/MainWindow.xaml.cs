@@ -353,7 +353,7 @@ namespace StandAloneComplex
 
             if (!this.checkSkeleton.IsChecked.HasValue || !this.checkSkeleton.IsChecked.Value) { return; }
 
-            foreach (var item in skeletonFrame.ToSkeletonData())
+            foreach (var item in skeletonFrame.ToSkeletons())
             {
                 item.DrawSkeletonLines(canvas, kinect);
                 item.DrawSkeletonEllipses(canvas, kinect);
